@@ -1,0 +1,46 @@
+name: 渲染视频
+on:
+  workflow_dispatch:
+    inputs:
+      page:
+        description: "页面和版本，例如 pages/kinetic.html#B"
+        default: "pages/kinetic.html#A"
+      name:
+        description: "成品文件名（不含 .mp4）"
+        default: "demo"
+      audio:
+        description: "配音/音效文件路径（可留空），例如 pages/kinetic_sfx.wav"
+        default: "pages/kinetic_sfx.wav"
+      fps:
+        description: "帧率"
+        default: "30"
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: 安装 ffmpeg 和中文字体
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk fonts-inter || sudo apt-get install -y ffmpeg fonts-noto-cjk
+      - name: 安装 Playwright
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: 渲染
+        run: node tools/render.js "${{ inputs.page }}" "output/${{ inputs.name }}.mp4" "${{ inputs.fps }}" "${{ inputs.audio }}"
+      - name: 上传到 Releases（手机浏览器可直接下载）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="video-$(date +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" "output/${{ inputs.name }}.mp4" --title "${{ inputs.name }}" --notes "页面: ${{ inputs.page }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.name }}
+          path: output/${{ inputs.name }}.mp4

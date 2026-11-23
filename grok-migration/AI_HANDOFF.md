@@ -84,3 +84,11 @@
 - ✅ 将核对结论写成当前交接文件。只写文档，不改原MP4/头像/音频/JSON、不修改 Actions 定时开关。
 - ⏳ 下一步：用户上传**新 MP3**后，核对同版本 JSON 并从单集完整01～06流程开始。
 - ⏳ 若有实际写回的 GitHub commit，可在本日志后继续补写精确 SHA；本次文档写入本身不代表渲染完成。
+
+
+### 2026-11-24｜15人头像素材索引（用户再次确认角色合照）
+- 用户本轮上传了15人对照合照，01～15姓名与现行 `roster15.json` 名单一致。此对照图在 ChatGPT 本次聊天附件中，**不等于15人完整表情切片**；后续渲染须确保每个角色独立身份、9个表情编号对应一致。
+- 在用户授权 Google Drive 的 `Grok交付_20261121` 目录，**通过元数据核实存在**最新版归档：[vn_theater_2_avatars15_20261123.zip](https://drive.google.com/file/d/14cStMLvQkFOJFyfUdQ3_6PDlwFMVrmYK/view)（83,800,864字节）。
+- 旧版/补充归档：[vn_theater_avatars_15_tiles_20261121.zip](https://drive.google.com/file/d/1ZbFQA3iQLrGI-tTwmXp44adRrTrgXhjK/view)（46,268,223字节）。
+- 已保存的15人总览：[roster_01_15.png](https://drive.google.com/file/d/1tvMoBIy1ctBFT4AlvZ9lEW_G4YHBb5pu/view)。
+- **注意：目前验证的是云盘文件存在和大小，尚未解压逐图比对，不能宣称135个表情切片全部正确或这次合照与ZIP中照片100%一致。** 后续开始渲染时先核对 ZIP 内文件数量、15个角色人脸与9表情是否完整，对照用户此次发送的角色总览。不要立即要求用户重复上传。

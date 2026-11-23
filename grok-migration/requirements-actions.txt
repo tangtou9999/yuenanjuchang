@@ -1,0 +1,11 @@
+# Cache key for the isolated Python renderer workflow.
+# The actual pinned engine dependencies are bundled in vn_theater_renderer_fixed_20261124.zip.
+pillow==13.0.0
+numpy==2.5.5
+faster-whisper==1.2.1
+ctranslate2==4.9.0
+av==19.0.2
+emoji==2.16.0
+argostranslate==1.11.0
+google-api-python-client
+google-auth

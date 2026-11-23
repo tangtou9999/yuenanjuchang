@@ -29,6 +29,8 @@ jobs:
       - name: 检查源码并运行单元测试
         run: |
           python -m pip install --upgrade pip
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
           pip install pillow==13.0.0 numpy==2.5.5
           unzip -q grok-migration/vn_theater_renderer_fixed_20261124.zip
           cd vn_theater

@@ -105,3 +105,18 @@
 - ⚠️ **全长尚未成功**：本地容器按全71秒渲染时超过180秒运行上限而中断，留下的Z003.mp4不完整不可交付；未生成Z003正式成片、封面及正式六件套，也未上传成品区。本地无法安装 faster-whisper（环境网络依赖不可达），故当前7秒试片只用JSON时间轴均分占位对齐，不能视为最终逐字同步质量。
 - ⚠️ **内容核实提醒**：Z003 剧本宣称“越南刚通报的小伙捡到2000万盾归还”并带有失主经营超市、拾金者收入等具体细节。首次网络检索未找到与2026-11-23该整组事实完全一致的报道；**不得在宣传文案中写成已核实的真实新闻**。可后续补权威出处，或在保持用户已制配音资产不变的前提下，明确标为剧情演绎，由用户决定是否修改配音。
 - **后续动作：**在能持续运行的 GitHub Actions/独立渲染主机接通受控 Drive 权限并做完整 Z003；先逐字时序/声音与画面检验，再生成独立3:4封面、发布文案首评、正式Drive六件套，并更新本交接日志。
+
+
+### 2026-11-24｜Z003 六件套已实际归档（ChatGPT，序号09）
+- 用户明确 Z003 为虚构剧情，不再要求查证情节中“越南捡到两千万”是否真实；保留原配音与故事文本。不得擅自改剧情原件。
+- 新建 Google Drive 正式成品文件夹： [09｜Z003｜捡到两千万该不该收酬金](https://drive.google.com/drive/folders/1vfp_7cZ75Xyb6BdIfzZw5Eiie7yUzRFK)，按原成品区1～8展示顺序追加 **09**；未删除或重排历史内容。
+- ✅ 本次实际完成并上传六件套（已回查文件夹列出6项）：
+  1. [01 配音 MP3 副本](https://drive.google.com/file/d/1d536j_SxyiOuoSO2A-auSEgyKs1YOGIq/view)；
+  2. [02 同版本JSON副本](https://drive.google.com/file/d/1j6OSaqQW5CBSDjd9WLsCfp5j7o3t8RrY/view)；
+  3. [03 剧情词汇说明副本](https://drive.google.com/file/d/1cMS_pd8pKTkv8UKCiKAamivlOMzLvjhh/view)；
+  4. [04 Z003完整71.13秒 MP4](https://drive.google.com/file/d/1ZSx8NbNdnkkk66w7buihPrOyxeNBJGJa/view)（5,612,390字节，ffprobe确认1080×1920、H.264 Main、封装30fps、AAC LC 48kHz）；
+  5. [05 独立3:4宣传封面](https://drive.google.com/file/d/1kaAYy3HotFIS_SHeF_4BS4JN_j-nlKWb/view)（1086×1448 PNG，标题“捡到2000万盾，要不要酬金？”）；
+  6. [06 发布文案＋首条评论＋交付记录](https://docs.google.com/document/d/1lzWwWjU2bews60fc07Y3N1XySQ7fWSlSOux0ygwwTsY/edit)（Google Doc，已验证正文写入与归档路径）。
+- ⚠️ **画质差别，后继 AI 必须知晓**：为克服当前本地执行时限，采用 145个关键时间独立绘制画面 + ffmpeg 分段定帧补成30fps成片；外层编码30fps，但运动并非30fps逐帧绘制。保持原音轨并叠BGM/SFX。未运行 Whisper 精确对齐，黄字卡与字幕依据JSON时间轴逐字符均分的对齐缓存。应视为**可播放可审片的完整成片**，不应谎称已通过流畅度与每字配音同步的正式终验。如用户要求正式社媒发布，先抽样检查动效和文字节奏，必要时在支持长任务的 Actions/渲染主机重渲原生30fps。
+- 云盘归档是“发布过去”的已执行动作；**没有自动发布到抖音/TikTok**。
+- 本轮未更改GitHub渲染器源码、未开启定时任务、未覆盖任何历史MP3/JSON/MP4。此条为工作记录。

@@ -1,0 +1,119 @@
+name: 15人群聊渲染器｜安全测试
+
+on:
+  push:
+    branches:
+      - feature/grok-chat-final-20261123
+    paths:
+      - "grok-migration/**"
+      - ".github/workflows/grok-chat-pipeline.yml"
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: "需要渲染的集号，如 Z003（不修改既有 Z002）"
+        required: true
+        default: "Z003"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: 校验修复版渲染器
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: 检查源码并运行单元测试
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow==13.0.0
+          unzip -q grok-migration/vn_theater_renderer_fixed_20261124.zip
+          cd vn_theater
+          python -m compileall -q .
+          python -m unittest discover -s tests -v
+
+  render:
+    name: 私有云盘 MP3＋JSON → 渲染 → 上传云盘
+    needs: validate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      EPISODE_CODE: ${{ inputs.episode }}
+      GOOGLE_DRIVE_SA_JSON: ${{ secrets.GOOGLE_DRIVE_SA_JSON }}
+      VN_INPUT_FOLDER_ID: ${{ secrets.VN_INPUT_FOLDER_ID }}
+      VN_OUTPUT_FOLDER_ID: ${{ secrets.VN_OUTPUT_FOLDER_ID }}
+      VN_AVATARS_ZIP_ID: ${{ secrets.VN_AVATARS_ZIP_ID }}
+      VN_BGM_ZIP_ID: ${{ secrets.VN_BGM_ZIP_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: grok-migration/requirements-actions.txt
+      - name: 核验参数及独立云盘授权
+        shell: bash
+        run: |
+          [[ "$EPISODE_CODE" =~ ^(EP|R|Z)[0-9]{1,5}$ ]] || { echo "集号格式不对"; exit 1; }
+          for variable in GOOGLE_DRIVE_SA_JSON VN_INPUT_FOLDER_ID VN_OUTPUT_FOLDER_ID VN_AVATARS_ZIP_ID VN_BGM_ZIP_ID; do
+            [[ -n "${!variable}" ]] || { echo "缺少仓库 Secret: $variable"; exit 1; }
+          done
+      - name: 安装FFmpeg/字体/渲染依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk fonts-noto-color-emoji
+          unzip -q grok-migration/vn_theater_renderer_fixed_20261124.zip
+          pip install -r vn_theater/requirements.txt google-api-python-client google-auth
+      - name: 从私人云盘读取匹配版本的 MP3＋JSON 和人物素材
+        run: |
+          python vn_theater/tools/drive_pipeline.py fetch \
+            --episode "$EPISODE_CODE" \
+            --input-folder "$VN_INPUT_FOLDER_ID" \
+            --avatars-zip "$VN_AVATARS_ZIP_ID" \
+            --bgm-zip "$VN_BGM_ZIP_ID" \
+            --root "$GITHUB_WORKSPACE"
+      - name: 运行当前正式群聊渲染器（含Whisper校准）
+        working-directory: vn_theater
+        run: |
+          python run_episode.py \
+            "incoming/${EPISODE_CODE}_render.json" \
+            "incoming/${EPISODE_CODE}_audio.mp3" \
+            --stem "$EPISODE_CODE" \
+            --style chat_final --no-cover-hold --no-endcard --no-cover \
+            --outdir "$GITHUB_WORKSPACE/output/$EPISODE_CODE"
+      - name: 验证MP4编码、时长、画面尺寸
+        run: |
+          python - <<'PY'
+          import os,json,subprocess
+          from pathlib import Path
+          code=os.environ["EPISODE_CODE"]
+          movie=Path("output")/code/(code+".mp4")
+          assert movie.is_file() and movie.stat().st_size>10000, "No complete MP4"
+          p=subprocess.check_output(["ffprobe","-v","error","-show_streams","-show_format","-of","json",str(movie)],text=True)
+          info=json.loads(p); streams=info["streams"]
+          v=next(s for s in streams if s["codec_type"]=="video")
+          a=next(s for s in streams if s["codec_type"]=="audio")
+          assert (v["width"],v["height"],v["codec_name"])==(1080,1920,"h264")
+          assert a["codec_name"]=="aac"
+          expected=json.load(open(Path("vn_theater/incoming")/(code+"_render.json"),encoding="utf-8"))["total_audio_duration_sec"]
+          actual=float(info["format"]["duration"])
+          assert abs(actual-float(expected))<3, f"Duration mismatch: {actual} vs {expected}"
+          print(f"MP4 technical check OK: {code}, {actual:.2f}s")
+          PY
+      - name: 回传 Google Drive（不会覆盖旧视频）
+        run: |
+          python vn_theater/tools/drive_pipeline.py upload \
+            --episode "$EPISODE_CODE" \
+            --output-folder "$VN_OUTPUT_FOLDER_ID" \
+            --video "output/$EPISODE_CODE/$EPISODE_CODE.mp4" \
+            --run-id "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: ${{ inputs.episode }}-render-${{ github.run_id }}
+          path: output/${{ inputs.episode }}/${{ inputs.episode }}.mp4
+          retention-days: 7

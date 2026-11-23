@@ -1,28 +1,31 @@
-# 正式群聊渲染器迁移记录（2026-11-23）
+# Grok 正式群聊渲染器迁移（2026-11-23）
 
-**状态：准备迁移；完整源码和素材尚未上传到 GitHub。** 不要把这个分支当成可运行的渲染系统。
+## 已完成
 
-## 来源与文件清单
-Grok 已将当前《越南语趣味大剧场》正式程序上传到项目的 Google Drive「Grok交付」文件夹：
+- 在独立分支 `feature/grok-chat-final-20261123` 中保留旧 `main` 程序，尚未切换生产。
+- 从 Grok 当天上传的正式源码包中筛选出 49 个文件，已实际提交到 `grok-migration/vn_theater_source_safe_20261123.zip`（977,386 字节）。
+- 为避免在 GitHub 公共仓库发布不必要的素材，已排除字体文件、历史备份与测试 MP3。归档文件经 ZIP 完整性测试通过。
+- 旧程序用 Node.js＋Playwright；新正式程序采用 Python＋FFmpeg、faster-whisper，与旧程序不同，不应直接覆盖。
 
-- `vn_theater_1_code_20261123.zip`：源码，7,088,093 字节
-- `vn_theater_2_avatars15_20261123.zip`：15 人头像，83,800,864 字节
-- `vn_theater_3_bgm_20261123.zip`：背景音乐，28,931,595 字节
-- `vn_theater_HANDOFF_交接说明_20261123.md`：详细运行说明
+## 尚未完成
 
-已核对三个 ZIP 均完整、可解压。正式渲染入口为 `run_episode.py`，依赖 Python 3.13、FFmpeg 和 `requirements.txt` 中的 CPU 包。指令样例：
+- 代码目前作为 ZIP 已上传，**还没解包为仓库中可直接执行的目录**，所以 GitHub Actions 还不能使用这个正式程序。
+- 15 人头像（83.8 MB）、BGM（28.9 MB）、字体未上传到公开仓库，仍在用户的 Google Drive 原素材区。
+- 尚未在 GitHub Actions 环境完成单集渲染测试，更没有实现日更三集、自动配音、自动质检或移动端成品下载页。
 
-```bash
-python run_episode.py incoming/R03_render.json incoming/R03_audio.mp3 --style chat_final --no-cover-hold --no-endcard --no-cover --outdir output/R03
+## 原始程序与接口
+
+正式入口为 `run_episode.py`，需要 Python 3.13、FFmpeg、`pip install -r requirements.txt`。示例：
+
+```sh
+python run_episode.py incoming/R03_render.json incoming/R03_audio.mp3 \\
+  --style chat_final --no-cover-hold --no-endcard --no-cover --outdir output/R03
 ```
 
-## 迁移安全边界
+## 后续迁移要求
 
-1. 旧 main 分支暂不更改。
-2. **仓库当前是公开的**；未经进一步处理，不要把用户提供的角色头像原件、私有音频、未审查版权的 BGM 或任何凭证提交到公开仓库。
-3. 任何缺失的 Google Drive 访问凭据只能放在 GitHub Actions Secrets；不能写入源码、工作流、提交记录或 Release。
-4. 新渲染器先做单集 R03 测试，核对人物、音画时长、视频编码和字幕；稳定后再考虑每天3集。
-5. 上传源码不等于配音、审核、封面生成自动化已经实现。
-
-## 当前阻碍
-当前 GitHub 连接器支持写入 UTF-8 文本，不支持直接把 Google Drive 的大 ZIP 二进制文件作为附件提交。需要一次支持二进制文件的 GitHub 上传通道，才能完成正式程序和素材的迁移。
+1. 将 ZIP 安全解压为新目录，不修改旧 `main` 代码。
+2. 头像/音乐/字体使用有授权的私有素材渠道，并先核查素材的公开分发许可。
+3. 在 GitHub Actions 上单集测试 R03：画面、人物、声音、时长、字幕、iPhone 兼容编码均须实际验证。
+4. 只有单集完全通过后，再测试一次连续三集、定时运行、失败重试、限额与超时处理。
+5. GitHub 仓库保持无真实密钥与敏感个人素材；任何收费或自动公开分发先取得用户同意。

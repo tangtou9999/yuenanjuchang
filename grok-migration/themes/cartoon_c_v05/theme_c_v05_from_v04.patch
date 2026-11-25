@@ -1,0 +1,139 @@
+--- a/vn_theater/styles/chat_final.py
++++ b/vn_theater/styles/chat_final.py
+@@ -16,6 +16,27 @@
+ BANNER_DEFAULT = os.path.join(ASSETS, "banner", "stage_right_redesign_v1.png")
+ GROUP_NAME = "越南语学习交流群"
+ BRAND_IMAGE = os.path.join(ASSETS, "banner", "stage_right_redesign_v1.png")
++# 方案C（手绘卡通）：独立背景素材 + 程序化字幕与动态黑板。
++CARTOON_C_BG = os.path.join(ASSETS, "banner", "cartoon_c_fixed_1080x1920.png")
++CARTOON_C_BOARD_TOP = 350
++CARTOON_C_CHAT_TOP = 610
++
++def _cartoon_c_enabled(state):
++    # 方案C为本独立v05演示版默认主题；旧版可通过 mix.ui_theme=classic 显式回退。
++    mix = state.get("mix") or {}
++    return str(mix.get("ui_theme", "cartoon_c")).lower() != "classic"
++
++def _cartoon_c_background():
++    if not os.path.isfile(CARTOON_C_BG):
++        raise FileNotFoundError(f"方案C背景缺失: {CARTOON_C_BG}")
++    cached = _cache.get("cartoon_c_background")
++    if cached is None:
++        cached = Image.open(CARTOON_C_BG).convert("RGBA")
++        if cached.size != (W, H):
++            raise ValueError(f"方案C背景必须为1080x1920，实际{cached.size}")
++        _cache["cartoon_c_background"] = cached
++    return cached.copy()
++
+ SAFE_TOP = 120                   # 抖音顶部遮挡大约这么高，关键文字放在此线之下
+ # 黑板单词栏（微信顶栏之下、聊天区之上）
+ WOOD, BOARD_INSET, BOARD_PAD_Y = 8, 16, 4
+@@ -657,11 +678,11 @@
+     return slots, row + 1 if word_list else 1
+ 
+ 
+-def layout_chips(words, plan=None):
++def layout_chips(words, plan=None, cartoon=False):
+     """把单词从左到右排成最多两行。一行时用约占内高 75% 的大卡；需要两行时再缩小。plan 决定行数，避免后出现的词把已落子挤跳。"""
+     plan = list(plan if plan is not None else words)
+     x0, y0, x1, y1, lab_w, flab = _board_metrics()
+-    origin, max_x = x0 + lab_w + 10, x1
++    origin, max_x = (max(350, x0 + lab_w + 10) if cartoon else x0 + lab_w + 10), x1
+     inner_h = y1 - y0
+     inner_board = BOARD_H - 2 * WOOD
+ 
+@@ -813,7 +834,7 @@
+     visible = [w for w in all_words if word_phase(w, t)[0] in ("fly", "landed")]
+     if not visible:
+         return L
+-    slots, fvi, fzh = layout_chips(visible, plan=all_words)
++    slots, fvi, fzh = layout_chips(visible, plan=all_words, cartoon=True)
+     for w, x, y, cw, ch in slots:
+         ph, local = word_phase(w, t)
+         if ph == "landed":
+@@ -825,13 +846,50 @@
+     return L
+ 
+ 
++def _cartoon_c_board_layer(state, t):
++    """透明文字与真实可动画单词卡，叠在画好的绿色木框黑板上。"""
++    L = Image.new("RGBA", (W, BOARD_H), (0, 0, 0, 0))
++    d = ImageDraw.Draw(L)
++    # 「今日单词」固定标题已经印在9:16背景图中；这里只叠加本集动态单词卡，避免文字重复。
++    all_words = state.get("words") or []
++    visible = [w for w in all_words if word_phase(w, t)[0] in ("fly", "landed")]
++    if not visible:
++        return L
++    slots, fvi, fzh = layout_chips(visible, plan=all_words, cartoon=True)
++    for w, x, y, cw, ch in slots:
++        phase, local = word_phase(w, t)
++        alpha = 1.0 if phase == "landed" else max(0.0, (ease_inout(local / float(w.get("fly", CARD_FLY))) - 0.93) / 0.07)
++        _draw_chip(L, x, y, cw, ch, w, fvi, fzh, alpha)
++    return L
++
++
++def _cartoon_c_chrome(im, state, t):
++    """只叠加可变的节目文字、黑板词卡和输入栏；中间聊天由原渲染器真正绘制。"""
++    d = ImageDraw.Draw(im)
++    # 越南国旗、节目名称、口号、插画、黑板固定标题均烘焙在背景PNG，禁止重复渲染。
++    # 今天单词以程序化卡片显示，卡背图本身不写任何固定教材内容。
++    im.alpha_composite(_cartoon_c_board_layer(state, t), (0, CARTOON_C_BOARD_TOP))
++    # 动态输入栏保持小、贴底，不复写聊天区域。
++    y0 = INPUT_BAR_TOP
++    d.rounded_rectangle([20, y0 + 13, W - 20, H - 13], radius=30, fill=(255, 251, 244, 247), outline=(209, 185, 146, 220), width=3)
++    bar_mid = y0 + 55
++    d.ellipse([40, bar_mid-28, 96, bar_mid+28], outline=(64, 87, 76), width=4)
++    d.text((68, bar_mid), "◖", font=F(33,False), fill=(64, 87, 76), anchor="mm")
++    d.rounded_rectangle([118, bar_mid-36, 851, bar_mid+36], radius=19, fill=(255, 255, 255), outline=(228, 220, 200), width=2)
++    d.text((487, bar_mid), "按住 说话", font=F(34,False), fill=(148, 143, 133), anchor="mm")
++    d.ellipse([866, bar_mid-29, 924, bar_mid+29], outline=(64, 87, 76), width=4)
++    d.text((895, bar_mid), "☺", font=F(37,False), fill=(64, 87, 76), anchor="mm")
++    d.ellipse([956, bar_mid-29, 1014, bar_mid+29], outline=(64, 87, 76), width=4)
++    d.text((985, bar_mid), "+", font=F(46,False), fill=(64, 87, 76), anchor="mm")
++
++
+ def slot_rect(word, state, t):
+     """目标筹码在整幅画面中的矩形 (x, y, w, h)。"""
+     all_words = state.get("words") or []
+-    slots, _, _ = layout_chips(all_words, plan=all_words)
++    slots, _, _ = layout_chips(all_words, plan=all_words, cartoon=_cartoon_c_enabled(state))
+     for w, x, y, cw, ch in slots:
+         if w is word:
+-            return x, TOP + y, cw, ch
++            return x, (CARTOON_C_BOARD_TOP if _cartoon_c_enabled(state) else TOP) + y, cw, ch
+     return None
+ 
+ 
+@@ -849,8 +907,8 @@
+             continue
+         ex, ey, ew, eh = rect
+         all_words = state.get("words") or []
+-        _, fvi, fzh = layout_chips(all_words, plan=all_words)
+-        start_y = TOP - 20
++        _, fvi, fzh = layout_chips(all_words, plan=all_words, cartoon=_cartoon_c_enabled(state))
++        start_y = (CARTOON_C_BOARD_TOP if _cartoon_c_enabled(state) else TOP) - 20
+         # Start slightly ABOVE and to the RIGHT of the board label, then home to the exact slot.
+         # Avoid obscuring the heading "今日单词" while the new word enters the stage.
+         start_center_x = int(W * 0.69)
+@@ -883,6 +941,8 @@
+ 
+ # ---------- 界面外壳 ----------
+ def chrome(im, state, t=0):
++    if _cartoon_c_enabled(state):
++        return _cartoon_c_chrome(im, state, t)
+     d = ImageDraw.Draw(im)
+     # 顶部：横幅（替换假状态栏）+ 微信群顶栏 + 黑板单词栏
+     im.alpha_composite(banner_layer(state), (0, 0))
+@@ -1074,10 +1134,10 @@
+         if len(_cache) > 60:
+             _cache.clear()
+         return im.convert("RGB")
+-    im = Image.new("RGBA", (W, H), BG)
++    im = _cartoon_c_background() if _cartoon_c_enabled(state) else Image.new("RGBA", (W, H), BG)
+     items = items_at(state, t)
+     # 打字提示出现时不推动旧消息的“弹入”节奏：它也当作一条消息
+-    for it, y, h, k in layout_stack(items, t, lambda it, idx=0: measure(it, idx, state), BOTTOM, CHAT_TOP, 30):
++    for it, y, h, k in layout_stack(items, t, lambda it, idx=0: measure(it, idx, state), BOTTOM, CARTOON_C_CHAT_TOP if _cartoon_c_enabled(state) else CHAT_TOP, 30):
+         kind = it["kind"]
+         if kind == "time":
+             clock = chat_clock(state, t)

@@ -1,0 +1,448 @@
+--- a/vn_theater/styles/chat_final.py
++++ b/vn_theater/styles/chat_final.py
+@@ -11,7 +11,9 @@
+ BANNER_H, HEADER_H = 280, 132
+ TOP, BOTTOM = BANNER_H + HEADER_H, 1690          # TOP=微信顶栏下沿；聊天区从 CHAT_TOP 开始
+ ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+-BANNER_DEFAULT = os.path.join(ASSETS, "banner", "banner.png")
++BANNER_DEFAULT = os.path.join(ASSETS, "banner", "stage_right_redesign_v1.png")
++GROUP_NAME = "越南语学习交流群"
++BRAND_IMAGE = os.path.join(ASSETS, "banner", "stage_right_redesign_v1.png")
+ SAFE_TOP = 120                   # 抖音顶部遮挡大约这么高，关键文字放在此线之下
+ # 黑板单词栏（微信顶栏之下、聊天区之上）
+ WOOD, BOARD_INSET, BOARD_PAD_Y = 8, 16, 4
+@@ -19,7 +21,7 @@
+ BOARD_H = 174 + 26  # 一行大卡约占内高 75%；两行时再缩小。比 v4 增高 26px（上限 +30）
+ CHIP_H = 74  # 仅作默认/回退；实际高度由 layout_chips 按行数计算
+ CHAT_TOP = TOP + BOARD_H
+-CARD_HOLD, CARD_FLY, CARD_POP = 1.5, 0.6, 0.22
++CARD_HOLD, CARD_FLY, CARD_POP = 0.60, 1.15, 0.22
+ _FONT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fonts")
+ _CHALK_ZH = os.path.join(_FONT_DIR, "MaShanZheng-Regular.ttf")
+ _CHALK_VI = os.path.join(_FONT_DIR, "PatrickHand-Regular.ttf")
+@@ -110,7 +112,18 @@
+             merged.append(ln)
+     return merged
+ 
+-def text_h(lines): return sum(LH + (GH if any(v and gloss(t) for t, v, _ in ln) else 0) for ln in lines)
++def _shot_homophones(state):
++    """Only audited source JSON homophones; Chinese translations are never pronunciation aids."""
++    return {
++        re.sub(r"[!?.,，。！？]+$", "", (w.get("word") or "").strip().lower()): (w.get("homophone") or "").strip()
++        for w in (state.get("words") or []) if (w.get("homophone") or "").strip()
++    }
++
++def _homophone(tk, homos):
++    return (homos or {}).get(re.sub(r"[!?.,，。！？]+$", "", tk.strip().lower()), "")
++
++def text_h(lines, homos=None):
++    return sum(LH + (GH if any(v and _homophone(t, homos) for t, v, _ in ln) else 0) for ln in lines)
+ def text_w(lines): return max(sum(tw(t, FN) for t, _, _ in ln) for ln in lines)
+ 
+ def char_times(state, s):
+@@ -120,10 +133,10 @@
+             if l["n"] == s["n"] and len(l["chars"]) == len(s["line"]): return [c[1] for c in l["chars"]]
+     L = max(len(s["line"]), 1); return [s["t0"] + (s["t1"] - s["t0"]) * i / L for i in range(L)]
+ 
+-def draw_text(L, x, y, lines, times=None, t=None, ink=SPOKEN, dim=UNSPOKEN):
++def draw_text(L, x, y, lines, times=None, t=None, ink=SPOKEN, dim=UNSPOKEN, homos=None):
+     d = ImageDraw.Draw(L)
+     for ln in lines:
+-        cx = x; g = any(v and gloss(tk) for tk, v, _ in ln)
++        cx = x; g = any(v and _homophone(tk, homos) for tk, v, _ in ln)
+         for tk, v, i in ln:
+             w = tw(tk, FN); on = times is None or t >= times[i]
+             col = ink if on else dim
+@@ -139,7 +152,7 @@
+                 else:
+                     d.rounded_rectangle([cx - 6, y + 10, cx + w + 6, y + LH - 2], 10, fill=hl)
+                     d.text((cx, y), tk, font=FN, fill=(200, 40, 20) if on else (190, 120, 100))
+-                if gloss(tk): d.text((cx + w / 2, y + LH - 2), gloss(tk), font=FG, fill=(225, 100, 30), anchor="mt")
++                if _homophone(tk, homos): d.text((cx + w / 2, y + LH - 2), _homophone(tk, homos), font=FG, fill=(185, 95, 33), anchor="mt")
+             else:
+                 d.text((cx, y), tk, font=FN, fill=col)
+             cx += w
+@@ -283,10 +296,10 @@
+     """有 assets/avatars/<角色名>/<序号>_<情绪>.png 则圆形头像+色圈，否则方圆角色色块。"""
+     if name and "name" not in (c or {}):
+         c = dict(c or {}, name=name)
+-    pad = 14
++    pad = 24
+     im = Image.new("RGBA", (size + 2 * pad, size + 2 * pad))
+     d = ImageDraw.Draw(im)
+-    s2 = int(size * (1 + 0.08 * pulse))
++    s2 = int(size * (1 + 0.30 * max(0.0, min(1.0, pulse))))
+     o = pad + (size - s2) // 2
+     path = _resolve_avatar_path(c, emotion)
+     if pulse > 0.02:
+@@ -315,28 +328,35 @@
+     r = al["rms"]; i = int(t * 30); return r[i] if 0 <= i < len(r) else 0
+ 
+ # ---------- 单条消息 ----------
+-def measure(it, idx=0):
++def measure(it, idx=0, state=None):
+     if it["kind"] == "time": return 70
+     if it["kind"] == "cap": return 150
+     if it["kind"] == "typing": return AV + 20
+-    return 46 + text_h(wrap(it["shot"]["line"])) + 34 + 10
++    return 46 + text_h(wrap(it["shot"]["line"]), _shot_homophones(state or {})) + 34 + 10
+ 
+ def msg_layer(state, it, h, t):
+     s = it["shot"]; c = state["chars"][s["name"]]; me = s["name"] == self_name(state)
+-    lines = wrap(s["line"]); bw = text_w(lines) + 56; bh = text_h(lines) + 30
++    lines = wrap(s["line"]); homos = _shot_homophones(state); bw = text_w(lines) + 56; bh = text_h(lines, homos) + 30
+     live = s["t0"] <= t <= s["t1"] + 0.3
+     L = Image.new("RGBA", (W, h)); d = ImageDraw.Draw(L)
+-    av = avatar(c, pulse=rms_at(state, t) if live else 0, emotion=pick_emotion(s, c), name=s["name"])
++    # Enlarges the actual face by up to 30% while speaking, with smoothly breathing zoom.
++    # Works even if the source does not contain an RMS cache.
++    dt = min(max(t - s["t0"], 0), max(s["t1"] - t, 0))
++    gate = ease_inout(min(1.0, dt / 0.22)) if live else 0.0
++    breathe = 0.70 + 0.30 * math.sin(max(0, t - s["t0"]) * 7.5) ** 2
++    audible = min(1.0, max(0.0, rms_at(state, t)))
++    pulse = gate * min(1.0, breathe * (0.88 + audible * 0.12))
++    av = avatar(c, pulse=pulse, emotion=pick_emotion(s, c), name=s["name"])
+     times = char_times(state, s) if live else None
+     if me:
+-        L.alpha_composite(av, (W - 36 - AV - 14, -14)); x1 = W - 36 - AV - 22; x0 = x1 - bw; by = 6
++        L.alpha_composite(av, (W - 36 - AV - 24, -24)); x1 = W - 36 - AV - 22; x0 = x1 - bw; by = 6
+         d.rounded_rectangle([x0, by, x1, by + bh], 14, fill=GREEN); d.polygon([(x1, by + 34), (x1 + 14, by + 44), (x1, by + 54)], fill=GREEN)
+-        draw_text(L, x0 + 28, by + 14, lines, times, t, dim=(80, 140, 60))
++        draw_text(L, x0 + 28, by + 14, lines, times, t, dim=(80, 140, 60), homos=homos)
+     else:
+-        L.alpha_composite(av, (36 - 14, -14)); x0 = 36 + AV + 22
++        L.alpha_composite(av, (36 - 24, -24)); x0 = 36 + AV + 22
+         d.text((x0 + 4, -2), c.get("display_name") or s["name"], font=FNAME, fill=(150, 150, 150)); by = 42
+         d.rounded_rectangle([x0, by, x0 + bw, by + bh], 14, fill="white"); d.polygon([(x0, by + 34), (x0 - 14, by + 44), (x0, by + 54)], fill="white")
+-        draw_text(L, x0 + 28, by + 14, lines, times, t)
++        draw_text(L, x0 + 28, by + 14, lines, times, t, homos=homos)
+     return L
+ 
+ def typing_layer(state, it, t):
+@@ -345,8 +365,8 @@
+     bw = tw(txt, f) + 140; bh = 76; n = int(t * 6) % 4
+     emo = pick_emotion(it.get("shot") or {}, c)
+     nm = (it.get("shot") or {}).get("name")
+-    if me: x1 = W - 36 - AV - 22; x0 = x1 - bw; L.alpha_composite(avatar(c, emotion=emo, name=nm), (W - 36 - AV - 14, -14))
+-    else: x0 = 36 + AV + 22; L.alpha_composite(avatar(c, emotion=emo, name=nm), (22, -14))
++    if me: x1 = W - 36 - AV - 22; x0 = x1 - bw; L.alpha_composite(avatar(c, emotion=emo, name=nm), (W - 36 - AV - 24, -24))
++    else: x0 = 36 + AV + 22; L.alpha_composite(avatar(c, emotion=emo, name=nm), (22, -24))
+     d.rounded_rectangle([x0, 14, x0 + bw, 14 + bh], 14, fill=GREEN if me else "white")
+     d.text((x0 + 26, 14 + bh / 2), txt, font=f, fill=(140, 140, 140), anchor="lm")
+     for j in range(3):
+@@ -383,75 +403,64 @@
+     return im
+ 
+ def _banner_image(path):
+-    path = path or BANNER_DEFAULT
+-    if path not in _banner_cache:
+-        if os.path.exists(path):
+-            im = Image.open(path).convert("RGBA")
+-            if im.size != (W, BANNER_H):
+-                im = im.resize((W, BANNER_H), Image.Resampling.LANCZOS)
+-        else:
+-            im = Image.new("RGBA", (W, BANNER_H), (20, 36, 56, 255))
+-        ov = Image.new("RGBA", (W, BANNER_H), (0, 0, 0, 0))
+-        od = ImageDraw.Draw(ov)
+-        for x in range(W):
+-            a = int(70 * max(0, 1 - x / (W * 0.65)) ** 1.15)
+-            od.line([(x, 0), (x, BANNER_H)], fill=(8, 19, 28, a))
+-        _banner_cache[path] = Image.alpha_composite(im, ov)
+-    return _banner_cache[path]
++    key = ("v2", BRAND_IMAGE)
++    if key in _banner_cache:
++        return _banner_cache[key]
++    L = Image.new("RGBA", (W, BANNER_H), (18, 19, 43, 255))
++    d = ImageDraw.Draw(L)
++    # Lightweight navy-to-plum gradient, keeping the title readable at iPhone size.
++    for yy in range(BANNER_H):
++        k = yy / max(1, BANNER_H - 1)
++        col = (int(19 + k * 15), int(19 + k * 3), int(45 - k * 5), 255)
++        d.line((0, yy, W, yy), fill=col)
++    # right original artwork: never stretch across the whole frame
++    path = BRAND_IMAGE if os.path.isfile(BRAND_IMAGE) else path
++    if path and os.path.isfile(path):
++        art = Image.open(path).convert("RGBA")
++        art = art.resize((410, 270), Image.Resampling.LANCZOS)
++        L.alpha_composite(art, (670, 5))
++        # Gradual left blend for headline text.
++        f = Image.new("RGBA", (470, BANNER_H), (0, 0, 0, 0));fd = ImageDraw.Draw(f)
++        for xx in range(470):
++            a = int(255 * max(0, 1 - xx / 240) ** 1.5)
++            fd.line((xx, 0, xx, BANNER_H), fill=(20, 20, 43, a))
++        L.alpha_composite(f, (610, 0))
++    # Baseline accent
++    d = ImageDraw.Draw(L)
++    d.line([(0, BANNER_H - 4), (W, BANNER_H - 4)], fill=(222, 174, 85, 235), width=4)
++    _banner_cache[key] = L
++    return L
+ 
+ def _episode(state):
+     return state.get("episode") or {}
+ 
+ def banner_layer(state):
+     ep = _episode(state)
+-    L = Image.new("RGBA", (W, BANNER_H), (0, 0, 0, 0))
+-    L.alpha_composite(_banner_image(ep.get("banner")))
++    L = _banner_image(ep.get("banner")).copy()
+     d = ImageDraw.Draw(L)
+-    # 关键文字从 SAFE_TOP 稍往下，躲开抖音顶部遮挡
+-    fy = SAFE_TOP + 8
+-    flag = vietnam_flag(88, 60)
+-    L.alpha_composite(flag, (36, fy + 4))
+-    parts = ep.get("title_parts") or ["越南语", "趣味大剧场"]
+-    if isinstance(parts, str):
+-        parts = [parts[:3], parts[3:]] if len(parts) > 3 else [parts, ""]
+-    ftitle = F(64)
+-    tx, ty = 36 + 88 + 16, fy
+-    # 阴影
+-    shadow = (8, 28, 41)
+-    x = tx
+-    for i, part in enumerate(parts):
+-        if not part:
+-            continue
+-        col = (255, 255, 255) if i == 0 else (255, 205, 33)
+-        for dx, dy in ((3, 3), (0, 5), (2, 2)):
+-            d.text((x + dx, ty + dy), part, font=ftitle, fill=shadow)
+-        d.text((x, ty), part, font=ftitle, fill=col)
+-        x += _tb(d, part, ftitle)[0] + 2
+-    # 红色副标题胶囊
+-    sub = ep.get("subtitle") or "每天一分钟学习越南语"
+-    fs = F(30)
+-    sw, sh = _tb(d, sub, fs)
+-    pad_x, pad_y = 22, 9
+-    sx, sy = 36, fy + 72
+-    d.rounded_rectangle([sx, sy, sx + sw + pad_x * 2, sy + sh + pad_y * 2], 28, fill=(187, 40, 38, 230))
+-    d.text((sx + pad_x, sy + pad_y - 2), sub, font=fs, fill="white")
+-    # 右下角本集钩子
+-    tag = ep.get("tag") or ""
+-    if tag:
+-        ft = F(25)
+-        tw_, th = _tb(d, tag, ft)
+-        px, py = 20, 8
+-        # 给右侧灯笼留一点空，文字过长则缩小
+-        max_w = 640
+-        if tw_ > max_w:
+-            ft = F(22); tw_, th = _tb(d, tag, ft)
+-        bx2 = W - 28
+-        bx1 = bx2 - tw_ - px * 2
+-        by2 = BANNER_H - 16
+-        by1 = by2 - th - py * 2
+-        d.rounded_rectangle([bx1, by1 + 4, bx2, by2 + 4], 14, fill=(146, 107, 34))  # 底边厚度
+-        d.rounded_rectangle([bx1, by1, bx2, by2], 14, fill=(255, 224, 124))
+-        d.text(((bx1 + bx2) / 2, (by1 + by2) / 2 - 1), tag, font=ft, fill=(63, 41, 24), anchor="mm")
++    # Move all branding UP; form two explicit typographic levels.
++    fx, fy = 28, 74
++    L.alpha_composite(vietnam_flag(78, 52), (fx, fy))
++    x = fx + 92
++    title_font = F(57)
++    d.text((x + 2, 74 + 3), "越南语", font=title_font, fill=(8, 8, 18))
++    d.text((x, 74), "越南语", font=title_font, fill=(248, 248, 248))
++    x += _tb(d, "越南语", title_font)[0] + 7
++    d.text((x + 2, 74 + 3), "趣味大剧场", font=title_font, fill=(8, 8, 18))
++    d.text((x, 74), "趣味大剧场", font=title_font, fill=(255, 208, 97))
++    sub = "每天一分钟学习越南语"
++    fsub = F(33, False)
++    sw, sh = _tb(d, sub, fsub)
++    sx, sy, pw, ph = 44, 159, sw + 48, 56
++    d.rounded_rectangle([sx+2, sy+4, sx+pw+2, sy+ph+4], 23, fill=(8, 8, 18, 170))
++    d.rounded_rectangle([sx, sy, sx+pw, sy+ph], 23, fill=(139, 41, 52, 255), outline=(235, 178, 99, 255), width=2)
++    d.text((sx + pw/2, sy + ph/2-1), sub, font=fsub, fill=(255, 249, 235), anchor="mm")
++    # short secondary cue; avoids placing unreadably long episode tags over right artwork
++    label = str(ep.get("episode_code") or f"EP{int(ep.get('number',1)):02d}")
++    ftag = F(22, False)
++    d.rounded_rectangle([42, 231, 42+126, 263], 11, fill=(255, 208, 97, 245))
++    d.text((105, 247), label[:9], font=ftag, fill=(41, 22, 35), anchor="mm")
++    d.text((183, 247), "轻松看剧 · 顺手学越语", font=F(24,False), fill=(195, 194, 207), anchor="lm")
+     return L
+ 
+ def _round_gradient(size, c0, c1, radius, border=None, bw=5):
+@@ -809,7 +818,7 @@
+             a = 1.0
+         else:
+             k = ease_inout(local / float(w.get("fly", CARD_FLY)))
+-            a = max(0.0, (k - 0.65) / 0.35)
++            a = max(0.0, (k - 0.93) / 0.07)
+         _draw_chip(L, x, y, cw, ch, w, fvi, fzh, a)
+     return L
+ 
+@@ -825,48 +834,49 @@
+ 
+ 
+ def draw_vocab_card(im, state, t):
++    """New word: above the chalkboard -> scale down -> settle in exact blackboard slot.
++    Never draw over the chat message area or show an opaque full-screen mask.
++    """
+     words = state.get("words") or []
+     for w in words:
+         ph, local = word_phase(w, t)
+         if ph not in ("card", "fly"):
+             continue
+-        card = _cache.setdefault(("vocab", w.get("word")), vocab_card_layer(w, _episode(state)))
+-        fly = float(w.get("fly", CARD_FLY))
++        rect = slot_rect(w, state, t)
++        if not rect:
++            continue
++        ex, ey, ew, eh = rect
++        all_words = state.get("words") or []
++        _, fvi, fzh = layout_chips(all_words, plan=all_words)
++        start_y = TOP - 20
++        # Start slightly ABOVE and to the RIGHT of the board label, then home to the exact slot.
++        # Avoid obscuring the heading "今日单词" while the new word enters the stage.
++        start_center_x = int(W * 0.69)
+         if ph == "card":
+-            # 缩放弹出，卡片本身保持不透明（不再半透明淡入，以免聊天背景透出来）
+-            a = min(1.0, local / CARD_POP)
+-            sc = 0.86 + 0.14 * ease(a)
+-            dim = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+-            ImageDraw.Draw(dim).rectangle([0, CHAT_TOP, W, BOTTOM], fill=(33, 43, 45, int(50 * a)))
+-            im.alpha_composite(dim)
+-            cw, ch = int(card.width * sc), int(card.height * sc)
+-            c = card.resize((max(2, cw), max(2, ch)), Image.Resampling.LANCZOS)
+-            x = (W - c.width) // 2
+-            y = CHAT_TOP + max(0, (BOTTOM - CHAT_TOP - c.height) // 2)
+-            im.alpha_composite(c, (x, y))
++            p = ease_inout(min(1.0, local / max(0.1, CARD_POP)))
++            scale = 1.42 + 0.10 * p
++            k = 0.0
+         else:
+-            k = ease_inout(local / fly)
+-            dim_a = int(50 * max(0.0, 1.0 - k))
+-            if dim_a:
+-                dim = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+-                ImageDraw.Draw(dim).rectangle([0, CHAT_TOP, W, BOTTOM], fill=(33, 43, 45, dim_a))
+-                im.alpha_composite(dim)
+-            sw, sh = card.width, card.height
+-            sx = (W - sw) // 2
+-            sy = CHAT_TOP + max(0, (BOTTOM - CHAT_TOP - sh) // 2)
+-            rect = slot_rect(w, state, t)
+-            if not rect:
+-                continue
+-            ex, ey, ew, eh = rect
+-            x = int(sx + (ex - sx) * k)
+-            y = int(sy + (ey - sy) * k)
+-            cw = max(2, int(sw + (ew - sw) * k))
+-            ch = max(2, int(sh + (eh - sh) * k))
+-            c = card.resize((cw, ch), Image.Resampling.LANCZOS)
+-            ca = 1.0 - max(0.0, (k - 0.65) / 0.35)
+-            if ca > 0:
+-                c.putalpha(c.getchannel("A").point(lambda v, a=ca: int(v * a)))
+-                im.alpha_composite(c, (x, y))
++            k = ease_inout(local / max(0.01, float(w.get("fly", CARD_FLY))))
++            scale = 1.52 - 0.52 * k
++        y = start_y * (1-k) + ey * k
++        cw, ch = max(1,int(ew*scale)), max(1,int(eh*scale))
++        # Use the SAME chip style for flying and landed phases, so text never morphs.
++        mini = _mini_card_layer(w, ew, eh, fvi, fzh)
++        layer = mini.resize((cw, ch), Image.Resampling.LANCZOS)
++        center_x = start_center_x * (1-k) + (ex + ew/2) * k
++        x = int(center_x - cw/2)
++        # Avoid covering group title: floating card lives near top of board on right side.
++        # Source y ranges from TOP-44 to the board's slot position.
++        alpha = 1.0 if ph == "fly" else max(0.0, min(1.0, local / CARD_POP))
++        if ph == "fly":
++            alpha = 1.0 if k < 0.93 else max(0.0, (1-k)/0.07)
++        if alpha <= 0:
++            continue
++        if alpha < 1:
++            layer.putalpha(layer.getchannel("A").point(lambda a,alpha=alpha: int(a*alpha)))
++        # Ensure no opaque dark backdrop blocks the chat or board.
++        im.alpha_composite(layer, (int(x), int(y)))
+ 
+ 
+ # ---------- 界面外壳 ----------
+@@ -879,7 +889,7 @@
+     d.line([(0, TOP - 1), (W, TOP - 1)], fill=(222, 222, 224), width=3)
+     d.line([(64, y0 + 52), (42, y0 + 74), (64, y0 + 96)], fill=(20, 20, 20), width=5)  # 返回
+     ep = _episode(state)
+-    group = ep.get("group") or f"越南语自习室({len(state['chars'])})"
++    group = GROUP_NAME
+     d.text((W // 2, y0 + 48), group, font=F(42), fill=(16, 16, 16), anchor="mm")
+     d.text((W // 2, y0 + 96), "中国学员 · 越南老师 · 一起学越南语", font=F(24, False), fill=(145, 146, 151), anchor="mm")
+     for j in range(3):
+@@ -1026,16 +1036,17 @@
+ # ---------- 入口 ----------
+ _cache = {}
+ def items_at(state, t):
++    """Clean chat: vocabulary now enters the blackboard instead of duplicate giant recap cards.
++    Shot captions still live in the script for archival, but are not re-inserted into chat.
++    """
+     items = [dict(kind="time", t0=-10, key="time")]
+-    shots = state["shots"]
+-    for s in shots:
+-        if s["t0"] <= t:
+-            items.append(dict(kind="msg", shot=s, t0=s["t0"], key=("m", s["n"])))
+-            for i, c in enumerate(s["caps"]):
+-                ct = s["t0"] + 0.6 + i * 0.8
+-                if ct <= t: items.append(dict(kind="cap", text=c, shot=s, t0=ct, key=("c", s["n"], i)))
+-        elif s["t0"] - 0.4 <= t: items.append(dict(kind="typing", shot=s, t0=s["t0"] - 0.4, key=("t", s["n"])))
+-    return sorted(items, key=lambda x: x["t0"])
++    for shot in state["shots"]:
++        if shot["t0"] <= t:
++            items.append(dict(kind="msg", shot=shot, t0=shot["t0"], key=("m", shot["n"])))
++        elif shot["t0"] - 0.4 <= t:
++            items.append(dict(kind="typing", shot=shot, t0=shot["t0"] - 0.4, key=("t", shot["n"])))
++    return sorted(items, key=lambda item: item["t0"])
++
+ 
+ def _endcard_t0(state):
+     ad = state.get("audio_dur") or state["shots"][-1]["t1"]
+@@ -1055,7 +1066,7 @@
+     im = Image.new("RGBA", (W, H), BG)
+     items = items_at(state, t)
+     # 打字提示出现时不推动旧消息的“弹入”节奏：它也当作一条消息
+-    for it, y, h, k in layout_stack(items, t, measure, BOTTOM, CHAT_TOP, 30):
++    for it, y, h, k in layout_stack(items, t, lambda it, idx=0: measure(it, idx, state), BOTTOM, CHAT_TOP, 30):
+         kind = it["kind"]
+         if kind == "time":
+             clock = chat_clock(state, t)
+@@ -1078,7 +1089,10 @@
+         elif e["type"] == "whoosh": shake = max(shake, 8 * (1 - abs(0.5 - dt / e["dur"]) * 2))
+         elif e["type"] == "laugh": fx_laugh(im, dt, e["dur"], int(e["t"] * 10))
+         elif e["type"] == "crow": fx_crow(im, dt, e["dur"])
+-        elif e["type"] in ("sparkle", "ding"): fx_sparkle(im, dt, e["dur"])
++        elif e["type"] in ("sparkle", "ding"):
++            # Vocabulary is already taught by the calm animated blackboard chip.
++            # Keep sound effects in audio mix, but avoid giant "叮咚" visual masking the board.
++            pass
+     draw_vocab_card(im, state, t)
+     if shake:
+         ox, oy = int(shake * math.sin(t * 90)), int(shake * 0.6 * math.cos(t * 70))
+--- a/vn_theater/import_voiceapp.py
++++ b/vn_theater/import_voiceapp.py
+@@ -425,11 +425,8 @@
+ 
+ 
+ def extract_group(data: dict) -> str:
+-    scene = data.get("global_scene") or ""
+-    m = re.search(r"《([^》]+)》", scene)
+-    if m:
+-        return m.group(1).strip()
+-    return "越南语自习室"
++    """Brand-level group name is fixed across episodes; legacy global_scene is metadata only."""
++    return "越南语学习交流群"
+ 
+ 
+ def extract_hook(data: dict, words: list[dict]) -> str:
+@@ -594,7 +591,7 @@
+         "episode": episode,
+         "episode_code": (data.get("episode_code") or "").strip() or None,
+         "hook": hook,
+-        "group": group,
++        "group": "越南语学习交流群",
+         "banner_title": ["越南语", "趣味大剧场"],
+         "banner_subtitle": "每天一分钟学习越南语",
+         # 可选项来自本集 JSON，未提供时使用渲染层安全默认值
+--- a/vn_theater/render.py
++++ b/vn_theater/render.py
+@@ -129,8 +129,8 @@
+         item["homophone"] = (item.get("homophone") or "").strip()
+         t0 = item.get("time")
+         item["t"] = float(t0) if t0 is not None else first_word_time(item["word"], shots, align)
+-        item["dur"] = float(item.get("dur", 1.5))
+-        item["fly"] = float(item.get("fly", 0.6))
++        item["dur"] = float(item.get("dur", 0.60))
++        item["fly"] = float(item.get("fly", 1.15))
+         if item["t"] is None:
+             print("警告: 找不到单词首次出现时间，跳过单词卡", item["word"])
+             continue

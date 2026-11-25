@@ -154,3 +154,14 @@
 - **08｜EP07：** 已证源只有28.776秒/9句。为解决“只完成半截”的观感，起草了保留前9句再追加6句的[EP07 v02新配音稿](https://drive.google.com/file/d/1rACv25HtN7xx972knkGaDIgdEF4lptil/view)，但**没有对应TTS配音/JSON**，不能声称已改好视频；待Gemini同角色声线生成新版素材后才能重新渲染。原版不动。
 - **开发与交接：** 新增可执行自动视频QA程序 [qa_video.py](./qa_video.py)（实际在新旧片上运行），附 [RENDER_REPRO_20261125.md](./RENDER_REPRO_20261125.md) 记录本地渲染方式、临时遮挡卡修正和限制。现在唯一权威状态表为 [CURRENT_STATUS.md](./CURRENT_STATUS.md)；下一AI先读其最上部。
 - **不得虚报：** 编码、音轨与静帧机检并不足以完成“听完整配音、逐字核字幕、确认流畅真实”标准。视频名称特标“候选/待终验”，需真实审片结果才能改为可发布。
+
+## 2026-11-25 22:00｜UI v03 实际修改与预览（最新）
+
+- **用户新指示：08 暂时不换、不重做。** 03和06仍是尚未发布待终验的作品；其他已发布作品仍禁止修改。此前08“待补配音”的任务在新指示后应标为**暂停**，不要擅自推进。
+- 用户提供的手机照片指出旧UI问题：群名“肖雨晴的越南语学习群(15)”不妥、品牌标题太低与口号拥挤、右侧戏剧插画丑、讲话头像只抖不放大、大型词卡干扰聊天、越语下方错误重复了括号中的中文翻译。
+- **已完成的UI引擎改动（真实源码，不只是效果图）**：`import_voiceapp.py`、`render.py`、`styles/chat_final.py`：群名统一`越南语学习交流群`；国旗+品牌标题上移并排版，口号分行；右侧替换原创3D舞台图片；讲话头像真实放大最多约30%；黑板单词先在黑板上缘放大呈现，停留0.6秒，再约1.15秒平滑缩小归位；移除重复“划重点”大卡、整屏叮咚字效；越语下方仅展示已审核JSON `homophone` 谐音，括号中文释义保留在正文；若源JSON未写谐音就不显示、不自编。
+- **实际测试**：使用尚未发布的EP05新MP3+JSON做了1080×1920真实静帧和3秒30fps H264/AAC动画片段，`python -m unittest discover -s tests -q` **17项通过**；这只是UI和短片测试，**未完成03/06全长重渲及全片验收，未发布。**
+- 实际成果：[新UI完整截图](https://drive.google.com/file/d/1aFZki-haLVVstwrTdjCuNO3DjNn-pI_f/view)、[今日单词四阶段截图](https://drive.google.com/file/d/1s3pPQco1vtijSXRcInyrc9mTQ5VYKBc0/view)、[3秒真实动画样片](https://drive.google.com/file/d/1zJbfP0HF6QwE01HNNfJgfvXzjWbKPth1/view)。
+- **新源码可恢复**：[Google Drive v03源码ZIP（含新Banner，不含私有头像/BGM）](https://drive.google.com/file/d/16ZXzfDCaD9QHA1bBxeag9W1e3ORseF-1/view)；GitHub [可应用补丁](./patches/20261125_ui_v03.patch)、[交接说明](./patches/20261125_ui_v03_README.md)。补丁在原修正版ZIP解包目录上用`patch -p1 --dry-run`检查成功，测试数据无需外传。后续别直接使用原来的旧ZIP当新版。
+- **交接下一步**：用户对UI截图确认后，用新模板先小范围验证03/06的词卡、字幕和配音；若用户还要求正式全长视频，则独立输出v03、逐字/全片带声验收、再按六件套归档。旧v02/原音频全部保留。08暂停。
+

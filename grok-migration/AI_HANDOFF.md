@@ -145,3 +145,12 @@
 - **没有实际检查的项目填“未验证”，没有全片带声音审看则不能标“通过可发布”。** 旧测试记录为已完成技术核对，不等于全片终验。
 - 当前待办：03 逐句/流畅度待终验，06 旧MP4与新版MP3不匹配需按新版重渲，08 源素材本身约29秒且结尾仓促需核对完整稿、必要时补新配音。
 - 当前仅改交接文档，未修复、替换、改动任何成片；用户已发布序号01、02、04、05、07、09均保持原样。
+
+
+### 2026-11-25｜实际重新渲染并入库：03/06，08补录计划（以CURRENT_STATUS为准）
+- 用户不接受只排查/只写文档，本轮已在本地完整执行两个新视频渲染并将候选MP4、QA报告上传Google Drive；**不是修复了所有内容**，不能把候选版当正式终验。所有旧版MP3/JSON/MP4及已发布01/02/04/05/07/09保持原样。
+- **03｜R03：** 42.467秒候选视频 [Google Drive](https://drive.google.com/file/d/1vNDnAksqSWg8J6OmyNks7JHU92A5SuAl/view)，[质检报告](https://drive.google.com/file/d/1aQL8IgOxHnVLMeYvSVyk2sOJz46FZtet/view)。基于同版本旧MP3+JSON真实逐帧重渲，取消大单词弹窗，音量RMS头像动效、底部小声波；全片解码成功、音轨相符、黑屏0；仍有静态画面及字幕逐字/配音卡壳未人工终验。
+- **06｜EP05：** 88.032秒新版候选视频 [Google Drive](https://drive.google.com/file/d/1YVcZreKBlUMOkVM03CAqbm2P9Ih12cWu/view)，[质检报告](https://drive.google.com/file/d/1DSR7bQ18uHA1k2XKyMFkbLEUGdtrFcs6/view)。旧MP4 89.328秒与同目录新版配音完全错版；新v02确切使用新版88.032秒 MP3 和同版JSON，7个窗口波形相关0.955～0.975、黑屏0、完整解码、末段完整，取消遮聊天大弹窗，加底部小声波；但逐字同步用JSON均匀占位（本地无Whisper）及静态窗口，**仍待全片带声审看**。原旧片未被覆盖。
+- **08｜EP07：** 已证源只有28.776秒/9句。为解决“只完成半截”的观感，起草了保留前9句再追加6句的[EP07 v02新配音稿](https://drive.google.com/file/d/1rACv25HtN7xx972knkGaDIgdEF4lptil/view)，但**没有对应TTS配音/JSON**，不能声称已改好视频；待Gemini同角色声线生成新版素材后才能重新渲染。原版不动。
+- **开发与交接：** 新增可执行自动视频QA程序 [qa_video.py](./qa_video.py)（实际在新旧片上运行），附 [RENDER_REPRO_20261125.md](./RENDER_REPRO_20261125.md) 记录本地渲染方式、临时遮挡卡修正和限制。现在唯一权威状态表为 [CURRENT_STATUS.md](./CURRENT_STATUS.md)；下一AI先读其最上部。
+- **不得虚报：** 编码、音轨与静帧机检并不足以完成“听完整配音、逐字核字幕、确认流畅真实”标准。视频名称特标“候选/待终验”，需真实审片结果才能改为可发布。

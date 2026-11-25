@@ -165,3 +165,8 @@
 - **新源码可恢复**：[Google Drive v03源码ZIP（含新Banner，不含私有头像/BGM）](https://drive.google.com/file/d/16ZXzfDCaD9QHA1bBxeag9W1e3ORseF-1/view)；GitHub [可应用补丁](./patches/20261125_ui_v03.patch)、[交接说明](./patches/20261125_ui_v03_README.md)。补丁在原修正版ZIP解包目录上用`patch -p1 --dry-run`检查成功，测试数据无需外传。后续别直接使用原来的旧ZIP当新版。
 - **交接下一步**：用户对UI截图确认后，用新模板先小范围验证03/06的词卡、字幕和配音；若用户还要求正式全长视频，则独立输出v03、逐字/全片带声验收、再按六件套归档。旧v02/原音频全部保留。08暂停。
 
+
+### 2026-11-25｜UI v04 聊天显示区和字号调整
+- 用户要求**拉满聊天区并增大聊天文字**；已完成v04实际代码修改并出四张时间点截图，输入栏下移、聊天区+104px、正文+17.4%。
+- [可运行v04源码ZIP](https://drive.google.com/file/d/1S3WmsqDdTpFG36zUmEfNMXo7b6QkyCy1/view) 与 [同秒截图对比](https://drive.google.com/file/d/1z1czLdFIPF2FILuUr9nSHMYkgfv87haF/view) 已入Drive；GitHub [v04补丁](./patches/20261125_ui_v04_from_v03.patch) 和 [README](./patches/20261125_ui_v04_README.md) 已提交。
+- `python -m unittest discover -s tests -q` 19项通过，尚未完整渲染03/06，不宣称已终验；08仍暂停，已发布其他集不动。

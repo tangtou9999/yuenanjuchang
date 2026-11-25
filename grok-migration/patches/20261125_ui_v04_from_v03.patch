@@ -1,0 +1,54 @@
+--- a/vn_theater/styles/chat_final.py
++++ b/vn_theater/styles/chat_final.py
+@@ -9,7 +9,9 @@
+ DEFAULT_SELF_NAME = "唐哥"      # 新版 15 人群聊默认从唐哥视角显示右侧绿色气泡
+ BG, GREEN = (237, 237, 237), (149, 236, 105)
+ BANNER_H, HEADER_H = 280, 132
+-TOP, BOTTOM = BANNER_H + HEADER_H, 1690          # TOP=微信顶栏下沿；聊天区从 CHAT_TOP 开始
++TOP = BANNER_H + HEADER_H
++INPUT_BAR_TOP = 1810                     # 输入栏下移，聊天主体尽量铺满竖屏
++BOTTOM = INPUT_BAR_TOP - 16             # 对话区保持紧贴输入栏而不重叠
+ ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+ BANNER_DEFAULT = os.path.join(ASSETS, "banner", "stage_right_redesign_v1.png")
+ GROUP_NAME = "越南语学习交流群"
+@@ -33,8 +35,8 @@
+ def ease_inout(x):
+     x = min(max(x, 0.0), 1.0)
+     return 0.5 - 0.5 * math.cos(math.pi * x)
+-FN, FNAME, FG = F(46, False), F(30, False), F(26)
+-LH, GH, MAXW, AV = 66, 32, 700, 112
++FN, FNAME, FG = F(54, False), F(34, False), F(32)
++LH, GH, MAXW, AV = 76, 39, 700, 112
+ SPOKEN, UNSPOKEN = (20, 20, 20), (165, 165, 165)
+ EMOJI = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+ def self_name(state):
+@@ -895,13 +897,22 @@
+     for j in range(3):
+         d.ellipse([W - 112 + j * 24, y0 + 64, W - 100 + j * 24, y0 + 76], fill=(20, 20, 20))
+     im.alpha_composite(board_layer(state, t), (0, TOP))
+-    d.rectangle([0, 1710, W, H], fill=(247, 247, 247)); d.line([(0, 1710), (W, 1710)], fill=(220, 220, 220), width=2)   # 底栏
+-    d.ellipse([28, 1755, 102, 1829], outline=(30, 30, 30), width=4)
+-    for k, r in enumerate((10, 20, 30)): d.arc([58 - r, 1792 - r, 58 + r, 1792 + r], -50, 50, fill=(30, 30, 30), width=4)
+-    d.rounded_rectangle([126, 1748, 846, 1836], 14, fill="white"); d.text((486, 1792), "按住 说话", font=F(32, False), fill=(190, 190, 190), anchor="mm")
+-    d.ellipse([872, 1755, 946, 1829], outline=(30, 30, 30), width=4)
+-    d.ellipse([892, 1778, 900, 1786], fill=(30, 30, 30)); d.ellipse([918, 1778, 926, 1786], fill=(30, 30, 30)); d.arc([890, 1782, 928, 1814], 20, 160, fill=(30, 30, 30), width=4)
+-    d.ellipse([970, 1755, 1044, 1829], outline=(30, 30, 30), width=4); d.line([(990, 1792), (1024, 1792)], fill=(30, 30, 30), width=4); d.line([(1007, 1775), (1007, 1809)], fill=(30, 30, 30), width=4)
++    # 输入栏贴近视频底边，只留底部必要安全区；原来1710起的一整块空白已收回给聊天消息。
++    bar_center = INPUT_BAR_TOP + 54
++    d.rectangle([0, INPUT_BAR_TOP, W, H], fill=(247, 247, 247))
++    d.line([(0, INPUT_BAR_TOP), (W, INPUT_BAR_TOP)], fill=(220, 220, 220), width=2)
++    d.ellipse([28, bar_center - 33, 94, bar_center + 33], outline=(30, 30, 30), width=4)
++    for r in (10, 20, 30):
++        d.arc([61 - r, bar_center - r, 61 + r, bar_center + r], -50, 50, fill=(30, 30, 30), width=4)
++    d.rounded_rectangle([116, bar_center - 42, 844, bar_center + 42], 16, fill="white")
++    d.text((480, bar_center), "按住 说话", font=F(34, False), fill=(174, 174, 174), anchor="mm")
++    d.ellipse([872, bar_center - 33, 938, bar_center + 33], outline=(30, 30, 30), width=4)
++    d.ellipse([888, bar_center - 10, 896, bar_center - 2], fill=(30, 30, 30))
++    d.ellipse([912, bar_center - 10, 920, bar_center - 2], fill=(30, 30, 30))
++    d.arc([887, bar_center - 10, 925, bar_center + 25], 20, 160, fill=(30, 30, 30), width=4)
++    d.ellipse([970, bar_center - 33, 1036, bar_center + 33], outline=(30, 30, 30), width=4)
++    d.line([(987, bar_center), (1019, bar_center)], fill=(30, 30, 30), width=4)
++    d.line([(1003, bar_center - 16), (1003, bar_center + 16)], fill=(30, 30, 30), width=4)
+ 
+ 
+ # ---------- 音效画面反应 ----------

@@ -1,0 +1,23 @@
+--- a/vn_theater/styles/chat_final.py
++++ b/vn_theater/styles/chat_final.py
+@@ -1135,6 +1135,9 @@
+             _cache.clear()
+         return im.convert("RGB")
+     im = _cartoon_c_background() if _cartoon_c_enabled(state) else Image.new("RGBA", (W, H), BG)
++    cartoon = _cartoon_c_enabled(state)
++    # 独立聊天视口：所有消息元素及弹入动画在最终合成时统一裁切。
++    chat = Image.new("RGBA", (W, BOTTOM - CARTOON_C_CHAT_TOP), (0, 0, 0, 0)) if cartoon else im
+     items = items_at(state, t)
+     # 打字提示出现时不推动旧消息的“弹入”节奏：它也当作一条消息
+     for it, y, h, k in layout_stack(items, t, lambda it, idx=0: measure(it, idx, state), BOTTOM, CARTOON_C_CHAT_TOP if _cartoon_c_enabled(state) else CHAT_TOP, 30):
+@@ -1149,7 +1152,9 @@
+             if live: lay = msg_layer(state, it, h, t)
+             else: lay = _cache.get(it["key"]) or _cache.setdefault(it["key"], msg_layer(state, it, h, t))
+         side = "right" if kind in ("msg", "typing") and it["shot"]["name"] == self_name(state) else ("center" if kind in ("cap", "time") else "left")
+-        pop(im, lay, (0, y), k if kind != "time" else 1, side)
++        pop(chat, lay, (0, y - CARTOON_C_CHAT_TOP if cartoon else y), k if kind != "time" else 1, side)
++    if cartoon:
++        im.alpha_composite(chat, (0, CARTOON_C_CHAT_TOP))
+     chrome(im, state, t)
+     shake = 0
+     for e in state.get("fx", []):

@@ -1,20 +1,13 @@
-name: 15人群聊渲染器｜安全测试
+# 历史实验，非生产入口。禁止自动启动；仅在用户另行明确要求时恢复。
+name: 历史实验｜暂停云端渲染
 
 on:
-  push:
-    branches:
-      - feature/cartoon-c-v05-20261125
-    paths:
-      - "grok-migration/**"
-      - ".github/workflows/grok-chat-pipeline.yml"
   workflow_dispatch:
     inputs:
       episode:
-        description: "需要渲染的集号，如 Z003（不修改既有 Z002）"
         required: true
-        default: "Z003"
+        default: Z003
       mode:
-        description: "先预览截图；确认后才选择完整视频"
         type: choice
         options: [preview, full]
         default: preview
@@ -24,6 +17,7 @@ permissions:
 
 jobs:
   validate:
+    if: ${{ false }} # 用户要求停止新部署，保留历史代码
     name: 校验修复版渲染器
     runs-on: ubuntu-24.04
     steps:

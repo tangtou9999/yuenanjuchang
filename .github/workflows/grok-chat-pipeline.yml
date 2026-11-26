@@ -3,7 +3,7 @@ name: 15人群聊渲染器｜安全测试
 on:
   push:
     branches:
-      - feature/grok-chat-final-20261123
+      - feature/cartoon-c-v05-20261125
     paths:
       - "grok-migration/**"
       - ".github/workflows/grok-chat-pipeline.yml"
@@ -13,6 +13,11 @@ on:
         description: "需要渲染的集号，如 Z003（不修改既有 Z002）"
         required: true
         default: "Z003"
+      mode:
+        description: "先预览截图；确认后才选择完整视频"
+        type: choice
+        options: [preview, full]
+        default: preview
 
 permissions:
   contents: read
@@ -32,7 +37,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y fonts-noto-cjk
           pip install pillow==13.0.0 numpy==2.5.5
-          unzip -q grok-migration/vn_theater_renderer_fixed_20261124.zip
+          unzip -q grok-migration/themes/cartoon_c_v05/vn_theater_themeC_v05_20261125.zip
           cd vn_theater
           python -m compileall -q .
           python -m unittest discover -s tests -v
@@ -68,7 +73,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg fonts-noto-cjk fonts-noto-color-emoji
-          unzip -q grok-migration/vn_theater_renderer_fixed_20261124.zip
+          unzip -q grok-migration/themes/cartoon_c_v05/vn_theater_themeC_v05_20261125.zip
           pip install -r vn_theater/requirements.txt google-api-python-client google-auth
       - name: 从私人云盘读取匹配版本的 MP3＋JSON 和人物素材
         run: |
@@ -78,7 +83,19 @@ jobs:
             --avatars-zip "$VN_AVATARS_ZIP_ID" \
             --bgm-zip "$VN_BGM_ZIP_ID" \
             --root "$GITHUB_WORKSPACE"
+      - name: C v05 真实静帧预览
+        if: inputs.mode == 'preview'
+        working-directory: vn_theater
+        run: |
+          python run_episode.py "incoming/${EPISODE_CODE}_render.json" "incoming/${EPISODE_CODE}_audio.mp3" --stem "$EPISODE_CODE" --no-align --style chat_final --still 13 --no-cover --no-endcard --no-cover-hold --outdir "$GITHUB_WORKSPACE/preview"
+      - uses: actions/upload-artifact@v4
+        if: inputs.mode == 'preview'
+        with:
+          name: cartoon-c-v05-preview-${{ github.run_id }}
+          path: preview/
+          if-no-files-found: error
       - name: 运行当前正式群聊渲染器（含Whisper校准）
+        if: inputs.mode == 'full'
         working-directory: vn_theater
         run: |
           python run_episode.py \
@@ -88,6 +105,7 @@ jobs:
             --style chat_final --no-cover-hold --no-endcard --no-cover \
             --outdir "$GITHUB_WORKSPACE/output/$EPISODE_CODE"
       - name: 验证MP4编码、时长、画面尺寸
+        if: inputs.mode == 'full'
         run: |
           python - <<'PY'
           import os,json,subprocess
@@ -107,6 +125,7 @@ jobs:
           print(f"MP4 technical check OK: {code}, {actual:.2f}s")
           PY
       - name: 回传 Google Drive（不会覆盖旧视频）
+        if: inputs.mode == 'full'
         run: |
           python vn_theater/tools/drive_pipeline.py upload \
             --episode "$EPISODE_CODE" \
@@ -114,7 +133,7 @@ jobs:
             --video "output/$EPISODE_CODE/$EPISODE_CODE.mp4" \
             --run-id "$GITHUB_RUN_ID"
       - uses: actions/upload-artifact@v4
-        if: success()
+        if: success() && inputs.mode == 'full'
         with:
           name: ${{ inputs.episode }}-render-${{ github.run_id }}
           path: output/${{ inputs.episode }}/${{ inputs.episode }}.mp4
